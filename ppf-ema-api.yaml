@@ -1,0 +1,642 @@
+openapi: 3.0.3
+info:
+  title: PPF EMA Frontend API
+  version: "1.0"
+  description: >
+    API specifikace pro mobilní frontend aplikaci PPF EMA (Employee Mobile App).  
+    Backend dodá ELANOR.  
+    Autentizace přes Microsoft Entra ID (OAuth2).  
+
+servers:
+  - url: https://api.ppf.example.com/v1
+
+tags:
+  - name: Uživatelské info
+  - name: Metriky
+  - name: Výplatní pásky
+  - name: Kalendář
+  - name: Notifikace
+  - name: Zaměstnanci
+  - name: Docházka
+  - name: Žádosti
+
+components:
+  schemas:
+    UserBase:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "abc123"
+        firstName:
+          type: string
+          example: "Jana"
+        lastName:
+          type: string
+          example: "Nováková"
+        position:
+          type: string
+          example: "HR Specialist"
+
+    User:
+      allOf:
+        - $ref: '#/components/schemas/UserBase'
+        - type: object
+          properties:
+            email:
+              type: string
+              format: email
+              example: "jana.novakova@firma.cz"
+            phone:
+              type: string
+              example: "+420123456789"
+
+    Employee:
+      allOf:
+        - $ref: '#/components/schemas/User'
+
+    CalendarUser:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "abc123"
+        fullName:
+          type: string
+          example: "Jana Nováková"
+        position:
+          type: string
+          example: "HR Specialist"
+
+    MetricEntry:
+      type: object
+      properties:
+        available:
+          type: integer
+          example: 12
+          description: Počet dostupných dnů/hodin absence
+        planned:
+          type: integer
+          example: 4
+          description: Počet plánovaných dnů/hodin absence
+        used:
+          type: integer
+          example: 4
+          description: Počet využitých dnů/hodin absence
+        entitlement:
+          type: integer
+          example: 20
+          description: Celkový nárok (např. počet hodin)
+
+      required:
+        - available
+        - planned
+        - used
+        - entitlement
+
+    PayslipSummary:
+      type: object
+      properties:
+        payslipId:
+          type: string
+          example: "ps123"
+        year:
+          type: integer
+          example: 2025
+
+    CalendarEvent:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+          example: "2025-08-15"
+        absenceType:
+          type: string
+          example: "Dovolená"
+        status:
+          type: string
+          enum: [Approved, Pending, Rejected]
+          example: "Approved"
+
+    NotificationTokenRequest:
+      type: object
+      properties:
+        action:
+          type: string
+          enum: [register, unregister]
+          description: "Akce s tokenem (volitelné, default register)"
+        firebaseToken:
+          type: string
+          example: "fcm_token_abc123xyz"
+
+    AttendanceStatus:
+      type: object
+      properties:
+        userId:
+          type: string
+          example: "abc123"
+        locked:
+          type: boolean
+          example: true
+
+    AttendanceLockRequest:
+      type: object
+      properties:
+        action:
+          type: string
+          enum: [lock, unlock]
+          example: lock
+
+    AbsenceType:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "100"
+          description: ID typu absence (číslo jako string)
+        name:
+          type: string
+          example: "Dovolená"
+          description: Název typu absence
+
+    HalfDayEnum:
+      type: string
+      enum:
+        - full
+        - half
+      example: full
+
+    AbsenceRequestInput:
+      type: object
+      properties:
+        absenceTypeId:
+          type: string
+          example: "100"
+        fromDate:
+          type: string
+          format: date
+          example: "2025-07-10"
+        toDate:
+          type: string
+          format: date
+          example: "2025-07-15"
+        firstDay:
+          $ref: '#/components/schemas/HalfDayEnum'
+        lastDay:
+          $ref: '#/components/schemas/HalfDayEnum'
+        note:
+          type: string
+          example: "Rodinná dovolená"
+        travelAdvance:
+          type: string
+          nullable: true
+          example: "1500"
+        travelStartDate:
+          type: string
+          format: date
+          nullable: true
+          example: "2025-07-10"
+        travelEndDate:
+          type: string
+          format: date
+          nullable: true
+          example: "2025-07-15"
+        travelEndPlace:
+          type: string
+          nullable: true
+          example: "Praha"
+        travelCode:
+          type: string
+          nullable: true
+          example: "TRV-2025-001"
+        travelStartTime:
+          type: string
+          format: time
+          nullable: true
+          example: "08:00"
+        travelEndTime:
+          type: string
+          format: time
+          nullable: true
+          example: "18:00"
+
+    AbsenceRequest:
+      allOf:
+        - $ref: '#/components/schemas/AbsenceRequestInput'
+        - type: object
+          properties:
+            id:
+              type: string
+              example: "req123"
+            status:
+              type: string
+              enum: [Pending, Approved, Rejected]
+              example: Pending
+            createdAt:
+              type: string
+              format: date-time
+              example: "2025-06-30T12:34:56Z"
+            updatedAt:
+              type: string
+              format: date-time
+              example: "2025-07-01T09:00:00Z"
+            user:
+              $ref: '#/components/schemas/Employee'
+
+    RequestApproval:
+      type: object
+      properties:
+        decision:
+          type: string
+          enum:
+            - Approved
+            - Rejected
+          example: Approved
+        comment:
+          type: string
+          nullable: true
+          example: "Schváleno, vše v pořádku"
+
+paths:
+  /me:
+    get:
+      tags:
+        - Uživatelské info
+      summary: Získat informace o přihlášeném uživateli
+      responses:
+        '200':
+          description: Informace o přihlášeném uživateli
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+
+  /metrics:
+    get:
+      tags:
+        - Metriky
+      summary: Získat metriky absence pro uživatele
+      parameters:
+        - name: userId
+          in: query
+          required: false
+          description: ID uživatele, pro kterého se mají metriky vrátit (pokud není zadáno, vrátí metriky aktuálního uživatele)
+          schema:
+            type: string
+            example: "abc123"
+      responses:
+        '200':
+          description: Metriky absence podle typu absence (ID jako klíč, např. "100", "105" atd.)
+          content:
+            application/json:
+              schema:
+                type: object
+                description: >
+                  Objekt, kde klíče jsou ID typů absence (string) a hodnoty jsou objekty s metrikami.
+                  Např.:
+                  {
+                    "100": { "available": 12, "planned": 4, "used": 4, "entitlement": 20 },
+                    "105": { "available": 5, "planned": 2, "used": 1, "entitlement": 8 }
+                  }
+                additionalProperties:
+                  $ref: '#/components/schemas/MetricEntry'
+        '401':
+          description: Neautorizovaný přístup - uživatel není přihlášen nebo token není platný
+        '403':
+          description: Přístup odepřen - uživatel nemá dostatečná oprávnění
+        '404':
+          description: Uživatel nenalezen
+
+  /payslips/{userId}/{year}:
+    get:
+      tags:
+        - Výplatní pásky
+      summary: Seznam výplatních pásek pro uživatele za rok
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: year
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Seznam výplatních pásek
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PayslipSummary'
+
+  /payslips/{payslipId}:
+    get:
+      tags:
+        - Výplatní pásky
+      summary: Stáhnout PDF konkrétní výplatní pásky
+      parameters:
+        - name: payslipId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: PDF soubor
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+
+  /calendar/users:
+    get:
+      tags:
+        - Kalendář
+      summary: Seznam uživatelů viditelných pro kalendář
+      responses:
+        '200':
+          description: Seznam uživatelů pro kalendář
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CalendarUser'
+
+  /calendar/{userId}/events:
+    get:
+      tags:
+        - Kalendář
+      summary: Získat kalendářní události uživatele
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: from
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Seznam kalendářních událostí
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CalendarEvent'
+
+  /notifications/token:
+    post:
+      tags:
+        - Notifikace
+      summary: Registrovat nebo aktualizovat Firebase token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationTokenRequest'
+      responses:
+        '204':
+          description: Token uložen/aktualizován
+        '400':
+          description: Neplatný vstup
+
+  /employees:
+    get:
+      tags:
+        - Zaměstnanci
+      summary: Získat seznam zaměstnanců
+      responses:
+        '200':
+          description: Seznam zaměstnanců
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Employee'
+        '401':
+          description: Neautorizovaný přístup
+
+  /employees/{employeeId}:
+    get:
+      tags:
+        - Zaměstnanci
+      summary: Detail zaměstnance podle ID
+      parameters:
+        - name: employeeId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Detail zaměstnance
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Employee'
+        '401':
+          description: Neautorizovaný přístup
+        '404':
+          description: Zaměstnanec nenalezen
+
+  /attendance/{userId}/lock:
+    post:
+      tags:
+        - Docházka
+      summary: Nastavit stav zámku docházky uživatele
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AttendanceLockRequest'
+      responses:
+        '204':
+          description: Stav docházky nastaven
+        '400':
+          description: Neplatný vstup
+        '403':
+          description: Přístup odepřen
+        '404':
+          description: Uživatel nenalezen
+
+  /attendance/{userId}/status:
+    get:
+      tags:
+        - Docházka
+      summary: Získat stav zámku docházky uživatele
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Stav docházky
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttendanceStatus'
+        '403':
+          description: Přístup odepřen
+        '404':
+          description: Uživatel nenalezen
+
+  /requests/classifiers:
+    get:
+      tags:
+        - Žádosti
+      summary: Načíst číselník typů absencí
+      parameters:
+        - name: language
+          in: query
+          required: true
+          schema:
+            type: string
+            example: "cs"
+      responses:
+        '200':
+          description: Seznam typů absencí s ID jako číslo (string)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AbsenceType'
+
+  /requests:
+    get:
+      tags:
+        - Žádosti
+      summary: Seznam aktivních žádostí uživatele
+      parameters:
+        - name: userId
+          in: query
+          required: false
+          description: ID uživatele, pro kterého se žádosti vrací; pokud není zadáno, vrátí žádosti aktuálního uživatele
+          schema:
+            type: string
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Seznam žádostí
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AbsenceRequest'
+        '401':
+          description: Neautorizovaný přístup
+
+    post:
+      tags:
+        - Žádosti
+      summary: Vytvořit nebo upravit žádost o absenci
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/AbsenceRequestInput'
+                - type: object
+                  properties:
+                    id:
+                      type: string
+                      nullable: true
+      responses:
+        '201':
+          description: Žádost vytvořena / upravena
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AbsenceRequest'
+        '400':
+          description: Neplatná data
+        '401':
+          description: Neautorizovaný přístup
+
+  /requests/approval:
+    get:
+      tags:
+        - Žádosti
+      summary: Seznam žádostí k schválení (manažer)
+      responses:
+        '200':
+          description: Žádosti k schválení
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AbsenceRequest'
+        '403':
+          description: Přístup odepřen
+        '401':
+          description: Neautorizovaný přístup
+
+  /requests/{requestId}/approval:
+    post:
+      tags:
+        - Žádosti
+      summary: Schválit nebo zamítnout žádost (manažer)
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestApproval'
+      responses:
+        '200':
+          description: Rozhodnutí uloženo
+        '400':
+          description: Neplatný vstup
+        '403':
+          description: Přístup odepřen
+        '404':
+          description: Žádost nenalezena

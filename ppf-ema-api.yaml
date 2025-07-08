@@ -113,7 +113,8 @@ components:
           example: "2025-08-15"
         absenceType:
           type: string
-          example: "Dovolená"
+          example: "100"
+          description: ID typu absence
         status:
           type: string
           enum: [Approved, Pending, Rejected]
@@ -387,20 +388,14 @@ paths:
           schema:
             type: string
             format: date
-            description: >
-              Počáteční datum ve formátu YYYY-MM-DD.
-              - Pokud není zadáno a `to` také ne → použije se dnešní datum.
-              - Pokud je zadáno pouze `to` → `from = to - 1 rok`.
+            description: Počáteční datum ve formátu YYYY-MM-DD. Pokud není zadáno a `to` také ne → použije se dnešní datum. Pokud je zadáno pouze `to` → `from = to - 1 rok`.
         - name: to
           in: query
           required: false
           schema:
             type: string
             format: date
-            description: >
-              Koncové datum ve formátu YYYY-MM-DD.
-              - Pokud není zadáno a `from` také ne → použije se `dnešek + 1 rok`.
-              - Pokud je zadáno pouze `from` → `to = from + 1 rok`.
+            description: Koncové datum ve formátu YYYY-MM-DD. Pokud není zadáno a `from` také ne → použije se `dnešek + 1 rok`. Pokud je zadáno pouze `from` → `to = from + 1 rok`.
       responses:
         '200':
           description: Seznam kalendářních událostí

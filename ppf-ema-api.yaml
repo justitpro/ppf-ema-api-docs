@@ -380,18 +380,27 @@ paths:
           required: true
           schema:
             type: string
+          description: ID uživatele
         - name: from
           in: query
-          required: true
+          required: false
           schema:
             type: string
             format: date
+            description: >
+            Počáteční datum ve formátu YYYY-MM-DD.
+            - Pokud není zadáno a `to` také ne → použije se dnešní datum.
+            - Pokud je zadáno pouze `to` → `from = to - 1 rok`.
         - name: to
           in: query
-          required: true
+          required: false
           schema:
             type: string
             format: date
+            description: >
+            Koncové datum ve formátu YYYY-MM-DD.
+            - Pokud není zadáno a `from` také ne → použije se `dnešek + 1 rok`.
+            - Pokud je zadáno pouze `from` → `to = from + 1 rok`.
       responses:
         '200':
           description: Seznam kalendářních událostí
@@ -602,7 +611,7 @@ paths:
       summary: Seznam žádostí k schválení (manažer)
       responses:
         '200':
-          description: Žádosti k schválení
+          description: Vrátí seznam všech žádostí, které spadají pod schvalování daného manažera. Zahrnuje jak žádosti čekající na schválení, tak i ty, které již byly schváleny nebo zamítnuty.
           content:
             application/json:
               schema:

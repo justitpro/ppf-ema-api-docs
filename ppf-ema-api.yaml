@@ -310,7 +310,7 @@ paths:
         '404':
           description: Uživatel nenalezen
 
-  /payslips/{userId}/{year}:
+  /payslips/{userId}:
     get:
       tags:
         - Výplatní pásky
@@ -324,7 +324,7 @@ paths:
             type: string
           description: ID uživatele
         - name: year
-          in: path
+          in: query
           required: false
           schema:
             type: integer
@@ -392,14 +392,14 @@ paths:
           schema:
             type: string
             format: date
-            description: Počáteční datum ve formátu YYYY-MM-DD. Pokud není zadáno a `to` také ne → použije se dnešní datum. Pokud je zadáno pouze `to` → `from = to - 1 rok`.
+          description: Počáteční datum ve formátu YYYY-MM-DD. Pokud není zadáno a `to` také ne → použije se dnešní datum. Pokud je zadáno pouze `to` → `from = to - 1 rok`.
         - name: to
           in: query
           required: false
           schema:
             type: string
             format: date
-            description: Koncové datum ve formátu YYYY-MM-DD. Pokud není zadáno a `from` také ne → použije se `dnešek + 1 rok`. Pokud je zadáno pouze `from` → `to = from + 1 rok`.
+          description: Koncové datum ve formátu YYYY-MM-DD. Pokud není zadáno a `from` také ne → použije se `dnešek + 1 rok`. Pokud je zadáno pouze `from` → `to = from + 1 rok`.
       responses:
         '200':
           description: Seznam kalendářních událostí
@@ -410,6 +410,75 @@ paths:
                 items:
                   $ref: '#/components/schemas/CalendarEvent'
 
+  /calendar/{userId}/overlap:
+    get:
+      tags:
+      - Kalendář
+      summary: Překryv událostí v týmu
+      description: |
+        Vrací seznam ostatních uživatelů a jejich událostí, které spadají do zadaného období.
+        Uživatelský ID v path parametru (`userId`) bude automaticky vynechán z výstupu.
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+          description: ID uživatele, pro kterého se kontroluje překryv (sám nebude ve výstupu)
+        - in: query
+          name: from
+          required: true
+          schema:
+            type: string
+            format: date
+          description: Počáteční datum rozsahu (yyyy-MM-dd)
+        - in: query
+          name: to
+          required: true
+          schema:
+            type: string
+            format: date
+          description: Koncové datum rozsahu (yyyy-MM-dd)
+      responses:
+        '200':
+          description: Přehled překrývajících se událostí ostatních uživatelů
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    userId:
+                      type: string
+                      example: "usr123"
+                    firstName:
+                      type: string
+                      example: "Petr"
+                    lastName:
+                      type: string
+                      example: "Novák"
+                    absences:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          from:
+                            type: string
+                            format: date
+                            example: "2025-08-10"
+                          to:
+                            type: string
+                            format: date
+                            example: "2025-08-14"
+                          absenceType:
+                            type: string
+                            example: "100"
+                          status:
+                            type: string
+                            enum: [planned, approved, rejected]
+                            example: "approved"
+  
   /notifications/token:
     post:
       tags:

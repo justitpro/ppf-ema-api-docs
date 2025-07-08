@@ -100,9 +100,10 @@ components:
         payslipId:
           type: string
           example: "ps123"
-        year:
+        date:
           type: integer
-          example: 2025
+          format: date
+          example: "2025-01-01"
 
     CalendarEvent:
       type: object
@@ -313,18 +314,21 @@ paths:
     get:
       tags:
         - Výplatní pásky
-      summary: Seznam výplatních pásek pro uživatele za rok
+      summary: Seznam výplatních pásek pro uživatele
+      description: Vrací seznam výplatních pásek za zvolený rok. Pokud není zadán rok, vrací všechny dostupné výplatnice (seřazené od nejnovější).
       parameters:
         - name: userId
           in: path
           required: true
           schema:
             type: string
+          description: ID uživatele
         - name: year
           in: path
-          required: true
+          required: false
           schema:
             type: integer
+          description: Rok (volitelný). Pokud není zadán, vrátí se všechny výplatnice.
       responses:
         '200':
           description: Seznam výplatních pásek
